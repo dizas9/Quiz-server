@@ -20,24 +20,19 @@ const authenticateJWT = (req, res, next) => {
   if (authHeader) {
     const token = authHeader.split(' ')[1]; // Bearer <token>
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, userPayload) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, userPayload) => {
       if (err) {
         console.error('JWT verification error:', err);
         return res.sendStatus(403); // Forbidden
       }
 
-      try {
-        // Find the user from the payload and attach it to the request
-        const user = await User.findById(userPayload.id);
-        if (!user) {
-          return res.sendStatus(404); // User not found
-        }
-        req.user = user;
-        next();
-      } catch (dbErr) {
-        console.error('Error fetching user:', dbErr);
-        return res.sendStatus(500);
+      // Find the user from the payload and attach it to the request
+      const user = User.findById(userPayload.id);
+      if (!user) {
+        return res.sendStatus(404); // User not found
       }
+      req.user = user;
+      next();
     });
   } else {
     res.sendStatus(401); // Unauthorized
@@ -104,13 +99,12 @@ app.get(
 
 // ===== PROTECTED API ROUTES =====
 
-// This route is protected. Only authenticated users with a valid JWT can access it.
-app.get('/api/profile', authenticateJWT, (req, res) => {
-  res.json({
-    message: "You have accessed a protected route!",
-    user: req.user,
-  });
-});
+const userAuthRoutes = require('./features/users/user.route');
+
+// ===== PROTECTED API ROUTES =====
+
+// Mount the user authentication routes
+app.use('/api', userAuthRoutes(authenticateJWT));
 
 // ===== SERVER START =====
 app.listen(port, () => {

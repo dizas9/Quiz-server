@@ -43,7 +43,8 @@ class User {
    * @returns {Promise<object>}
    */
   static async findOrCreate(profile) {
-    const { provider, id: providerId, displayName, emails } = profile;
+    const { provider, id: providerId, displayName: rawDisplayName, emails } = profile;
+    const displayName = rawDisplayName || providerId; // Use providerId as fallback if displayName is null
     const email = emails && emails.length > 0 ? emails[0].value : null;
 
     try {
@@ -88,6 +89,35 @@ class User {
         // Attempt to refetch the user that must exist
         return this.findOne({ provider, providerId });
       }
+      throw err;
+    }
+  }
+  static async saveUserProfile(userId, profileData) {
+    const query = `
+      INSERT INTO user_profile (user_id, profile_data)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET profile_data = EXCLUDED.profile_data, "updatedAt" = CURRENT_TIMESTAMP;
+    `;
+    try {
+      await pool.query(query, [userId, profileData]);
+    } catch (err) {
+      console.error('Error saving user profile:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Fetches all users from the database.
+   * @returns {Promise<Array<object>>}
+   */
+  static async getAllUsers() {
+    const query = 'SELECT id, provider, "providerId", "displayName", email, "createdAt" FROM users';
+    try {
+      const { rows } = await pool.query(query);
+      return rows;
+    } catch (err) {
+      console.error('Error fetching all users:', err);
       throw err;
     }
   }
