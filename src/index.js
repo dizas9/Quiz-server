@@ -106,8 +106,16 @@ const userAuthRoutes = require('./features/users/user.route');
 // Mount the user authentication routes
 app.use('/api', userAuthRoutes(authenticateJWT));
 
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load('./swagger.yaml');
+
+// Serve Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // ===== SERVER START =====
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
   console.log('Please open your browser and navigate to the address to log in.');
+  console.log('API documentation available at http://localhost:${port}/api-docs');
 });
